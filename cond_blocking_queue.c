@@ -134,12 +134,21 @@ void *cond_blocking_queue_poll(blocking_queue_t *b, struct timespec *abstime) {
 
   // Signal or broadcast that an empty slot is available in the
   // unprotected bounded buffer (if needed)
-
+  pthread_mutex_lock(&b->mutex);
+  while (b->buffer->size == 0) {
+    rc = pthread_cond_timedwait(&b->not_empty, &b->mutex, abstime);
+    if (rc == ETIMEDOUT) {
+      break;
+      return NULL;
+    }
+  }
   d = bounded_buffer_get(b->buffer);
+  pthread_cond_broadcast(&b->not_full);
   if (d == NULL)
     mtxprintf(pb_debug, "poll (T) - data=NULL\n");
   else
     mtxprintf(pb_debug, "poll (T) - data=%d\n", *(int *)d);
+  pthread_mutex_unlock(&b->mutex);
 
   // Leave mutual exclusion
 
@@ -163,8 +172,17 @@ int cond_blocking_queue_offer(blocking_queue_t *b, void *d,
 
   // Signal or broadcast that a full slot is available in the
   // unprotected bounded buffer (if needed)
+  pthread_mutex_lock(&b->mutex);
+  while (b->buffer->size == b->buffer->max_size) {
+    rc = pthread_cond_timedwait(&b->not_full, &b->mutex, abstime);
+    if (rc == ETIMEDOUT) {
+      break;
+      return NULL;
+    }
+  }
 
   done = bounded_buffer_put(b->buffer, d);
+  pthread_cond_broadcast(&b->not_empty);
   if (!done)
     d = NULL;
 
@@ -172,6 +190,7 @@ int cond_blocking_queue_offer(blocking_queue_t *b, void *d,
     mtxprintf(pb_debug, "offer (T) - data=NULL\n");
   else
     mtxprintf(pb_debug, "offer (T) - data=%d\n", *(int *)d);
+  pthread_mutex_unlock(&b->mutex);
 
   // Leave mutual exclusion
   return done;
