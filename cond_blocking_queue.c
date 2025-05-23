@@ -82,13 +82,14 @@ void *cond_blocking_queue_remove(blocking_queue_t *b) {
 
   // Signal or broadcast that an empty slot is available in the
   // unprotected bounded buffer (if needed)
-
+  pthread_mutex_lock(&b->mutex);
+  pthread_cond_broadcast(&b->not_full);
   d = bounded_buffer_get(b->buffer);
   if (d == NULL)
     mtxprintf(pb_debug, "remove (I)) - data=NULL\n");
   else
     mtxprintf(pb_debug, "remove (I)) - data=%d\n", *(int *)d);
-
+  pthread_mutex_unlock(&b->mutex);
   // Leave mutual exclusion
   return d;
 }
@@ -102,7 +103,8 @@ int cond_blocking_queue_add(blocking_queue_t *b, void *d) {
 
   // Signal or broadcast that a full slot is available in the
   // unprotected bounded buffer (if needed)
-
+  pthread_mutex_lock(&b->mutex);
+  pthread_cond_broadcast(&b->not_empty);
   done = bounded_buffer_put(b->buffer, d);
   if (!done)
     d = NULL;
@@ -111,7 +113,7 @@ int cond_blocking_queue_add(blocking_queue_t *b, void *d) {
     mtxprintf(pb_debug, "add (I)) - data=NULL\n");
   else
     mtxprintf(pb_debug, "add (I)) - data=%d\n", *(int *)d);
-
+  pthread_mutex_unlock(&b->mutex);
   // Leave mutual exclusion
   return done;
 }
