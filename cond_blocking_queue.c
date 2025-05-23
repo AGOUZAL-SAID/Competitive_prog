@@ -12,8 +12,7 @@ blocking_queue_t *cond_blocking_queue_init(int length) {
   b = (blocking_queue_t *)malloc(sizeof(blocking_queue_t));
   b->buffer = bounded_buffer_init(length);
   // Initialize the synchronization components
-  pthread_mutex_init(&b->mutex_con, NULL);
-  pthread_mutex_init(&b->mutex_prod, NULL);
+  pthread_mutex_init(&b->mutex, NULL);
   pthread_cond_init(&b->not_empty, NULL);
   pthread_cond_init(&b->not_full, NULL);
   b->is_sem_impl = false; // condition variable 
@@ -32,9 +31,9 @@ void *cond_blocking_queue_get(blocking_queue_t *b) {
 
   // Signal or broadcast that an empty slot is available in the
   // unprotected bounded buffer (if needed)
-  pthread_mutex_lock(&b->mutex_con);
+  pthread_mutex_lock(&b->mutex);
   while (b->buffer->size == 0) {
-    pthread_cond_wait(&b->not_empty, &b->mutex_con);
+    pthread_cond_wait(&b->not_empty, &b->mutex);
   }
   d = bounded_buffer_get(b->buffer);
   pthread_cond_broadcast(&b->not_full);
@@ -43,7 +42,7 @@ void *cond_blocking_queue_get(blocking_queue_t *b) {
   else
   mtxprintf(pb_debug, "get (B) - data=%d\n", *(int *)d);
   
-  pthread_mutex_unlock(&b->mutex_con);
+  pthread_mutex_unlock(&b->mutex);
   // Leave mutual exclusion
 
   return d;
@@ -60,9 +59,9 @@ void cond_blocking_queue_put(blocking_queue_t *b, void *d) {
 
   // Signal or broadcast that a full slot is available in the
   // unprotected bounded buffer (if needed)
-  pthread_mutex_lock(&b->mutex_prod);
+  pthread_mutex_lock(&b->mutex);
   while (b->buffer->size == b->buffer->max_size) {
-    pthread_cond_wait(&b->not_full, &b->mutex_prod);
+    pthread_cond_wait(&b->not_full, &b->mutex);
   }
   bounded_buffer_put(b->buffer, d);
   pthread_cond_broadcast(&b->not_empty);
@@ -70,7 +69,7 @@ void cond_blocking_queue_put(blocking_queue_t *b, void *d) {
     mtxprintf(pb_debug, "put (B) - data=NULL\n");
   else
     mtxprintf(pb_debug, "put (B) - data=%d\n", *(int *)d);
-  pthread_mutex_unlock(&b->mutex_prod);
+  pthread_mutex_unlock(&b->mutex);
   // Leave mutual exclusion
 }
 

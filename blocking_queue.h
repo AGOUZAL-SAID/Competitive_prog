@@ -16,8 +16,7 @@ extern int pb_debug;
 typedef struct {
   bool is_sem_impl;
   bounded_buffer_t *buffer;
-  pthread_mutex_t mutex_con;
-  pthread_mutex_t mutex_prod;
+  pthread_mutex_t mutex;
   pthread_cond_t not_empty;
   pthread_cond_t not_full;
 } blocking_queue_t;
