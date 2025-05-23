@@ -37,7 +37,7 @@ void *cond_blocking_queue_get(blocking_queue_t *b) {
     pthread_cond_wait(&b->not_empty, &b->mutex_con);
   }
   d = bounded_buffer_get(b->buffer);
-  pththread_cond_broadcast(&b->not_full);
+  pthread_cond_broadcast(&b->not_full);
   if (d == NULL)
   mtxprintf(pb_debug, "get (B) - data=NULL\n");
   else
