@@ -19,6 +19,8 @@ typedef struct {
   pthread_mutex_t mutex;
   pthread_cond_t not_empty;
   pthread_cond_t not_full;
+  sem_t *empty_slots; // Semaphore for empty slots
+  sem_t *full_slots;  // Semaphore for full slots
 } blocking_queue_t;
 
 // Initialise the protected buffer structure above. sem_impl specifies

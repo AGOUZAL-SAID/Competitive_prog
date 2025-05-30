@@ -18,10 +18,15 @@ blocking_queue_t *sem_blocking_queue_init(int length) {
   b = (blocking_queue_t *)malloc(sizeof(blocking_queue_t));
   b->buffer = bounded_buffer_init(length);
   // Initialize the synchronization attributes
+  b->is_sem_impl = true; // semaphore implementation
   // Use these filenames as named semaphores
   sem_unlink(EMPTY_SLOTS_NAME);
   sem_unlink(FULL_SLOTS_NAME);
   // Open the semaphores using the filenames above
+  sem_open(EMPTY_SLOTS_NAME, O_CREAT, 0600, length); 
+  sem_open(FULL_SLOTS_NAME, O_CREAT, 0600, 0);
+  b->empty_slots = sem_open(EMPTY_SLOTS_NAME, 0);
+  b->full_slots = sem_open(FULL_SLOTS_NAME, 0);
   return b;
 }
 
@@ -31,18 +36,21 @@ void *sem_blocking_queue_get(blocking_queue_t *b) {
   void *d;
 
   // Enforce synchronisation semantics using semaphores.
+  sem_wait(b->full_slots); 
 
   // Enter mutual exclusion.
-
+  pthread_mutex_lock(&b->mutex);  
   d = bounded_buffer_get(b->buffer);
+
   if (d == NULL)
     mtxprintf(pb_debug, "get (B) - data=NULL\n");
   else
     mtxprintf(pb_debug, "get (B) - data=%d\n", *(int *)d);
 
   // Leave mutual exclusion.
-
+  pthread_mutex_unlock(&b->mutex);
   // Enforce synchronisation semantics using semaphores.
+  sem_post(b->empty_slots);
 
   return d;
 }
@@ -52,9 +60,9 @@ void *sem_blocking_queue_get(blocking_queue_t *b) {
 void sem_blocking_queue_put(blocking_queue_t *b, void *d) {
 
   // Enforce synchronisation semantics using semaphores.
-
+  sem_wait(b->empty_slots);
   // Enter mutual exclusion.
-
+  pthread_mutex_lock (&b->mutex);
   bounded_buffer_put(b->buffer, d);
   if (d == NULL)
     mtxprintf(pb_debug, "put (B) - data=NULL\n");
@@ -62,8 +70,9 @@ void sem_blocking_queue_put(blocking_queue_t *b, void *d) {
     mtxprintf(pb_debug, "put (B) - data=%d\n", *(int *)d);
 
   // Leave mutual exclusion.
-
+  pthread_mutex_unlock(&b->mutex);
   // Enforce synchronisation semantics using semaphores.
+  sem_post(b->full_slots);
 }
 
 // Extract an element from buffer. If the attempted operation is not
