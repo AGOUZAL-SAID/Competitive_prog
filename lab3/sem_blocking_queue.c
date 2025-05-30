@@ -82,27 +82,30 @@ void *sem_blocking_queue_remove(blocking_queue_t *b) {
   int rc = -1;
 
   // Enforce synchronisation semantics using semaphores.
-
-  if (rc != 0) {
+  rc = sem_trywait(b->full_slots); 
+  if(rc == -1){
+    if (rc != 0) {
+      if (d == NULL)
+        mtxprintf(pb_debug, "remove (I)) - data=NULL\n");
+      else
+        mtxprintf(pb_debug, "remove (I)) - data=%d\n", *(int *)d);
+      return d;
+    }
+  }
+  else {
+    // Enter mutual exclusion.
+    pthread_mutex_lock(&b->mutex);
+    d = bounded_buffer_get(b->buffer);
     if (d == NULL)
       mtxprintf(pb_debug, "remove (I)) - data=NULL\n");
     else
       mtxprintf(pb_debug, "remove (I)) - data=%d\n", *(int *)d);
-    return d;
+
+    // Leave mutual exclusion.
+    pthread_mutex_unlock(&b->mutex);
+    // Enforce synchronisation semantics using semaphores.
+    sem_post(b->empty_slots);
   }
-
-  // Enter mutual exclusion.
-
-  d = bounded_buffer_get(b->buffer);
-  if (d == NULL)
-    mtxprintf(pb_debug, "remove (I)) - data=NULL\n");
-  else
-    mtxprintf(pb_debug, "remove (I)) - data=%d\n", *(int *)d);
-
-  // Leave mutual exclusion.
-
-  // Enforce synchronisation semantics using semaphores.
-
   return d;
 }
 
@@ -112,18 +115,20 @@ int sem_blocking_queue_add(blocking_queue_t *b, void *d) {
   int rc = -1;
 
   // Enforce synchronisation semantics using semaphores.
-
-  if (rc != 0) {
-    d = NULL;
-    if (d == NULL)
-      mtxprintf(pb_debug, "add (I)) - data=NULL\n");
-    else
-      mtxprintf(pb_debug, "add (I)) - data=%d\n", *(int *)d);
-    return 0;
+  rc = sem_trywait(b->empty_slots);
+  if (rc == -1){
+    if (rc != 0) {
+      d = NULL;
+      if (d == NULL)
+        mtxprintf(pb_debug, "add (I)) - data=NULL\n");
+      else
+        mtxprintf(pb_debug, "add (I)) - data=%d\n", *(int *)d);
+      return 0;
+    }
   }
-
+  else{
   // Enter mutual exclusion.
-
+  pthread_mutex_lock(&b->mutex);
   bounded_buffer_put(b->buffer, d);
   if (d == NULL)
     mtxprintf(pb_debug, "add (I)) - data=NULL\n");
@@ -131,8 +136,10 @@ int sem_blocking_queue_add(blocking_queue_t *b, void *d) {
     mtxprintf(pb_debug, "add (I)) - data=%d\n", *(int *)d);
 
   // Leave mutual exclusion.
-
+  pthread_mutex_unlock(&b->mutex);
   // Enforce synchronisation semantics using semaphores.
+  sem_post(b->full_slots);
+  }
   return 1;
 }
 
