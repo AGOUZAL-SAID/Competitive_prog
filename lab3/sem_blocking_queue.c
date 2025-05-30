@@ -152,17 +152,19 @@ void *sem_blocking_queue_poll(blocking_queue_t *b, struct timespec *abstime) {
   int rc = -1;
 
   // Enforce synchronisation semantics using semaphores.
-
-  if (rc != 0) {
-    if (d == NULL)
-      mtxprintf(pb_debug, "poll (T) - data=NULL\n");
-    else
-      mtxprintf(pb_debug, "poll (T) - data=%d\n", *(int *)d);
-    return d;
+  rc = sem_timedwait(b->full_slots, abstime);
+  if (rc ==-1){
+    if (rc != 0) {
+      if (d == NULL)
+        mtxprintf(pb_debug, "poll (T) - data=NULL\n");
+      else
+        mtxprintf(pb_debug, "poll (T) - data=%d\n", *(int *)d);
+      return d;
+    }
   }
-
+  else {
   // Enter mutual exclusion.
-
+  pthread_mutex_lock(&b->mutex);
   d = bounded_buffer_get(b->buffer);
   if (d == NULL)
     mtxprintf(pb_debug, "poll (T) - data=NULL\n");
@@ -170,8 +172,10 @@ void *sem_blocking_queue_poll(blocking_queue_t *b, struct timespec *abstime) {
     mtxprintf(pb_debug, "poll (T) - data=%d\n", *(int *)d);
 
   // Leave mutual exclusion.
-
+    pthread_mutex_unlock(&b->mutex);
   // Enforce synchronisation semantics using semaphores.
+  sem_post(b->empty_slots);
+  }
   return d;
 }
 
@@ -184,18 +188,21 @@ int sem_blocking_queue_offer(blocking_queue_t *b, void *d,
   int rc = -1;
 
   // Enforce synchronisation semantics using semaphores.
-
-  if (rc != 0) {
-    d = NULL;
-    if (d == NULL)
-      mtxprintf(pb_debug, "offer (T) - data=NULL\n");
-    else
-      mtxprintf(pb_debug, "offer (T) - data=%d\n", *(int *)d);
-    return 0;
+  rc = sem_timedwait(b->empty_slots, abstime);
+  if (rc == -1){
+    if (rc != 0) {
+      d = NULL;
+      if (d == NULL)
+        mtxprintf(pb_debug, "offer (T) - data=NULL\n");
+      else
+        mtxprintf(pb_debug, "offer (T) - data=%d\n", *(int *)d);
+      return 0;
+    }
   }
+  else{
 
   // Enter mutual exclusion.
-
+    pthread_mutex_lock(&b->mutex);
   bounded_buffer_put(b->buffer, d);
   if (d == NULL)
     mtxprintf(pb_debug, "offer (T) - data=NULL\n");
@@ -203,7 +210,9 @@ int sem_blocking_queue_offer(blocking_queue_t *b, void *d,
     mtxprintf(pb_debug, "offer (T) - data=%d\n", *(int *)d);
 
   // Leave mutual exclusion.
-
+  pthread_mutex_unlock(&b->mutex);
   // Enforce synchronisation semantics using semaphores.
+  sem_post(b->full_slots);
+  }
   return 1;
 }
