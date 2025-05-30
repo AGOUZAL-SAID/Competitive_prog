@@ -16,11 +16,13 @@ struct timespec start_time;
 // These are internal synchronization objects. Do not use them.
 pthread_mutex_t resync_mutex;
 pthread_cond_t resync_condvar;
-
+pthread_mutex_t sleep;
+pthread_cond_t weekup;
 void utils_init() {
   pthread_mutex_init(&resync_mutex, NULL);
+  pthread_mutex_init(&sleep, NULL);
   pthread_cond_init(&resync_condvar, NULL);
-
+  pthread_cond_init(&weekup, NULL);
   pthread_key_create(&thread_info_key, NULL);
 
   // Assign a name and an id (0) to the main thread
@@ -87,22 +89,12 @@ void add_millis_to_timespec(struct timespec *ts, long msec) {
 
 /* Delay until an absolute time. */
 void delay_until(struct timespec *absolute_time) {
-  struct timeval tv_now;
-  struct timespec ts_now;
-  struct timespec relative_time;
-
-  gettimeofday(&tv_now, NULL);
-  TIMEVAL_TO_TIMESPEC(&tv_now, &ts_now);
-  relative_time.tv_nsec = absolute_time->tv_nsec - ts_now.tv_nsec;
-  relative_time.tv_sec = absolute_time->tv_sec - ts_now.tv_sec;
-  if (relative_time.tv_nsec < 0) {
-    relative_time.tv_nsec = 1E9 + relative_time.tv_nsec;
-    relative_time.tv_sec--;
+  pthread_mutex_lock(&sleep);
+  int rc = pthread_cond_timedwait(&weekup, &sleep, absolute_time);
+  while(rc != ETIMEDOUT) {
+    rc = pthread_cond_timedwait(&weekup, &sleep, absolute_time);
   }
-  if (relative_time.tv_sec < 0)
-    return;
-
-  nanosleep(&relative_time, NULL);
+  pthread_mutex_unlock(&sleep);
 }
 
 // Compute time elapsed from start time

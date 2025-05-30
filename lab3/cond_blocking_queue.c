@@ -177,7 +177,7 @@ int cond_blocking_queue_offer(blocking_queue_t *b, void *d,
     rc = pthread_cond_timedwait(&b->not_full, &b->mutex, abstime);
     if (rc == ETIMEDOUT) {
       break;
-      return NULL;
+      return 0;
     }
   }
 
