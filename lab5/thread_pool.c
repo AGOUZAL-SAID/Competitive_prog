@@ -48,7 +48,7 @@ void *pool_thread_main(void *arg) {
   int pool_thread_id = ((pool_thread_arg_t *)arg)->pool_thread_id;
   blocking_queue_t *blocking_queue = thread_pool->blocking_queue;
 
-  bool is_core = (pool_thread_id <= thread_pool->core_pool_size);
+  bool is_core = (pool_thread_id < thread_pool->core_pool_size);
   set_current_thread_id(&pool_thread_id, is_core ? "core" : "temp");
 
   task_t *task;
@@ -56,23 +56,43 @@ void *pool_thread_main(void *arg) {
 
   mtxprintf(pt_debug, "thread created\n");
   while (true) {
-    pthread_mutex_lock(&thread_pool->mutex);
-    thread_pool->idle_threads++;
-    pthread_mutex_unlock(&thread_pool->mutex);
-    task = blocking_queue_get(blocking_queue);
-    pthread_mutex_lock(&thread_pool->mutex);
-    thread_pool->idle_threads--; 
-    pthread_mutex_unlock(&thread_pool->mutex);
-    if (task == NULL || is_shutdown_task(task)) {
-        break;
-    }
-    result = task->main(task->arg);
-    future_complete(task->future, result);
-    task_destroy(task);
-  }
+      pthread_mutex_lock(&thread_pool->mutex);
+      thread_pool->idle_threads++;
+      pthread_mutex_unlock(&thread_pool->mutex);
 
-  mtxprintf(pt_debug, "thread terminated\n");
-  return NULL;
+      if (!is_core && thread_pool->keep_alive_time != FOREVER) {
+          struct timespec abstime;
+          clock_gettime(CLOCK_REALTIME, &abstime);
+          add_millis_to_timespec(&abstime, thread_pool->keep_alive_time);
+          task = blocking_queue_poll(blocking_queue, &abstime);
+      } else {
+
+          task = blocking_queue_get(blocking_queue);
+      }
+      pthread_mutex_lock(&thread_pool->mutex);
+      thread_pool->idle_threads--;
+      pthread_mutex_unlock(&thread_pool->mutex);
+
+      if (!is_core && thread_pool->keep_alive_time != FOREVER && task == NULL) {
+          pthread_mutex_lock(&thread_pool->mutex);
+          thread_pool->pool_size--;
+          pthread_mutex_unlock(&thread_pool->mutex);
+          break;
+      }
+      if (task == NULL || is_shutdown_task(task)) {
+          pthread_mutex_lock(&thread_pool->mutex);
+          thread_pool->pool_size--;
+          pthread_mutex_unlock(&thread_pool->mutex);
+          break;
+      }
+
+        result = task->main(task->arg);
+        future_complete(task->future, result);
+        task_destroy(task);
+    }
+
+    mtxprintf(pt_debug, "thread terminated\n");
+    return NULL;
 }
 
 bool thread_pool_execute(thread_pool_t *thread_pool, task_t *task) {
