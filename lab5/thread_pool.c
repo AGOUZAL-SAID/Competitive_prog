@@ -90,8 +90,19 @@ bool thread_pool_execute(thread_pool_t *thread_pool, task_t *task) {
         if (blocking_queue_add(thread_pool->blocking_queue, (void *)task)) {
             return true;
         } else {
-            return false;
-        }
+            pthread_mutex_lock(&thread_pool->mutex);
+            if (thread_pool->pool_size < thread_pool->max_pool_size) {
+                pool_thread_arg_t *arg = pool_thread_arg_create(thread_pool, id++);
+                pthread_t thread;
+                pthread_create(&thread, NULL, pool_thread_main, (void *)arg);
+                thread_pool->pool_size++;
+                pthread_mutex_unlock(&thread_pool->mutex);
+                blocking_queue_put(thread_pool->blocking_queue, (void *)task);
+                return true;
+            }
+            pthread_mutex_unlock(&thread_pool->mutex);
+            return false; 
+        } 
     }
 }
 
