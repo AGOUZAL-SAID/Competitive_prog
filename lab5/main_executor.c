@@ -71,7 +71,6 @@ int main(int argc, char *argv[]) {
         mtxprintf(ex_debug, "report task failure for identifier %d\n", i);
     }
   }
-  thread_pool_start_threads(executor->thread_pool);
   for (i = 0; i < task_table_size; i++) {
     if (!tasks[i].ms_period && !tasks[i].ms_delay)
       if (futures[i] != NULL) {

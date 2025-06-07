@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 int pt_debug = 0;
-
+int id = 1;
 typedef struct {
   thread_pool_t *thread_pool;
   int pool_thread_id;
@@ -76,8 +76,23 @@ void *pool_thread_main(void *arg) {
 }
 
 bool thread_pool_execute(thread_pool_t *thread_pool, task_t *task) {
-    blocking_queue_put(thread_pool->blocking_queue, (void *)task);
-    return true;
+    pthread_mutex_lock(&thread_pool->mutex);
+    if (thread_pool->pool_size < thread_pool->core_pool_size) {
+        pool_thread_arg_t *arg = pool_thread_arg_create(thread_pool, id++);
+        pthread_t thread;
+        pthread_create(&thread, NULL, pool_thread_main, (void *)arg);
+        thread_pool->pool_size++;
+        pthread_mutex_unlock(&thread_pool->mutex);
+        blocking_queue_put(thread_pool->blocking_queue, (void *)task);
+        return true;
+    } else {
+        pthread_mutex_unlock(&thread_pool->mutex);
+        if (blocking_queue_add(thread_pool->blocking_queue, (void *)task)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
 
 void thread_pool_shutdown(thread_pool_t *thread_pool) {
@@ -85,15 +100,4 @@ void thread_pool_shutdown(thread_pool_t *thread_pool) {
   mtxprintf(pt_debug, "alive threads %d, idle threads %d\n",
             thread_pool->pool_size, thread_pool->idle_threads);
   pthread_mutex_unlock(&thread_pool->mutex);
-}
-
-// Start all core threads after tasks are submitted
-void thread_pool_start_threads(thread_pool_t *thread_pool) {
-    for (int i = 0; i < thread_pool->core_pool_size; ++i) {
-        pool_thread_arg_t *arg = pool_thread_arg_create(thread_pool, i);
-        pthread_create(&thread_pool->threads[i], NULL, pool_thread_main, (void *)arg);
-        pthread_mutex_lock(&thread_pool->mutex);
-        thread_pool->pool_size++;
-        pthread_mutex_unlock(&thread_pool->mutex);
-    }
 }
