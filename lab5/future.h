@@ -6,6 +6,8 @@
 typedef struct {
   void *result;
   bool completed;
+  pthread_mutex_t mutex;
+  pthread_cond_t cond;
 } future_t;
 
 future_t *future_create();
