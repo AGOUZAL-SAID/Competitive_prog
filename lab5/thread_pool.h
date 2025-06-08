@@ -18,7 +18,6 @@ typedef struct {
   long keep_alive_time;
   int shutdown;
   pthread_mutex_t mutex;
-  pthread_cond_t condition;
   pthread_t *threads;
 } thread_pool_t;
 

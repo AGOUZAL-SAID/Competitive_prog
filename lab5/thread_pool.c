@@ -37,7 +37,6 @@ thread_pool_t *thread_pool_create(int core_pool_size, int max_pool_size,
   thread_pool->blocking_queue = blocking_queue;
   thread_pool->shutdown = 0;
   pthread_mutex_init(&thread_pool->mutex, NULL);      
-  pthread_cond_init(&thread_pool->condition, NULL);   
   shutdown_task = task_create(NULL, NULL, NULL, 0, 0, 0);
   thread_pool->threads = malloc(sizeof(pthread_t) * max_pool_size);
   return thread_pool;
