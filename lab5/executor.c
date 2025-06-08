@@ -26,12 +26,55 @@ future_t *executor_submit_task(executor_t *executor, main_function_t main,
   future_destroy(future);
   return NULL;
 }
+
+typedef struct {
+    executor_t *executor;
+    main_function_t main;
+    void *arg;
+    int ms_delay;
+} fixed_delay_task_info_t;
+
+void *fixed_delay_task_wrapper(void *info_ptr) {
+    fixed_delay_task_info_t *info = (fixed_delay_task_info_t *)info_ptr;
+
+
+    info->main(info->arg);
+
+    if (!info->executor->thread_pool->shutdown) {
+        struct timespec next_release;
+        clock_gettime(CLOCK_REALTIME, &next_release);
+        add_millis_to_timespec(&next_release, info->ms_delay);
+        delay_until(&next_release);
+
+        fixed_delay_task_info_t *next_info = malloc(sizeof(fixed_delay_task_info_t));
+        *next_info = *info;
+        task_t *task = task_create(fixed_delay_task_wrapper, next_info, NULL, 0, 0, 0);
+        thread_pool_execute(info->executor->thread_pool, task);
+    }
+    free(info);
+    return NULL;
+}
+
 bool executor_schedule_with_fixed_delay(executor_t *executor,
-                                        main_function_t main, void *arg,
-                                        int ms_offset, int ms_delay) {
-  bool success = false;
-  return success;
-};
+                                       main_function_t main, void *arg,
+                                       int ms_offset, int ms_delay) {
+    if (ms_delay <= 0) return false;
+    fixed_delay_task_info_t *info = malloc(sizeof(fixed_delay_task_info_t));
+    info->executor = executor;
+    info->main = main;
+    info->arg = arg;
+    info->ms_delay = ms_delay;
+
+    if (ms_offset > 0) {
+        struct timespec first_release;
+        clock_gettime(CLOCK_REALTIME, &first_release);
+        add_millis_to_timespec(&first_release, ms_offset);
+        delay_until(&first_release);
+    }
+
+    task_t *task = task_create(fixed_delay_task_wrapper, info, NULL, 0, 0, 0);
+    return thread_pool_execute(executor->thread_pool, task);
+}
 
 typedef struct {
     executor_t *executor;
