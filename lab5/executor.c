@@ -117,6 +117,7 @@ bool executor_schedule_at_fixed_rate(executor_t *executor, main_function_t main,
 
 void executor_shutdown(executor_t *executor) {
   mtxprintf(ex_debug, "executor shutdown activated\n");
+  interrupt_delays();
   thread_pool_shutdown(executor->thread_pool);
   mtxprintf(ex_debug, "executor shutdown terminated\n");
 }

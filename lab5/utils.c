@@ -7,22 +7,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 pthread_key_t thread_info_key;
-
+volatile bool interruption = false; // Set to true to interrupt threads
 // Start time as a timespec
 struct timespec start_time;
 // These are internal synchronization objects. Do not use them.
 pthread_mutex_t resync_mutex;
 pthread_cond_t resync_condvar;
-
+pthread_mutex_t nap;
+pthread_cond_t weekup;
 // Thread names per id
 char **thread_names;
 int n_thread_names = 0;
 
 void utils_init(int n_threads) {
   pthread_mutex_init(&resync_mutex, NULL);
+  pthread_mutex_init(&nap, NULL);
   pthread_cond_init(&resync_condvar, NULL);
+  pthread_cond_init(&weekup, NULL);
 
   pthread_key_create(&thread_info_key, NULL);
 
@@ -89,22 +93,19 @@ void add_millis_to_timespec(struct timespec *ts, long msec) {
 
 /* Delay until an absolute time. */
 void delay_until(struct timespec *absolute_time) {
-  struct timeval tv_now;
-  struct timespec ts_now;
-  struct timespec relative_time;
-
-  gettimeofday(&tv_now, NULL);
-  TIMEVAL_TO_TIMESPEC(&tv_now, &ts_now);
-  relative_time.tv_nsec = absolute_time->tv_nsec - ts_now.tv_nsec;
-  relative_time.tv_sec = absolute_time->tv_sec - ts_now.tv_sec;
-  if (relative_time.tv_nsec < 0) {
-    relative_time.tv_nsec = 1E9 + relative_time.tv_nsec;
-    relative_time.tv_sec--;
+  pthread_mutex_lock(&nap);
+  while (!interruption) {
+      int rc = pthread_cond_timedwait(&weekup, &nap, absolute_time);
+      if (rc == ETIMEDOUT) break;
   }
-  if (relative_time.tv_sec < 0)
-    return;
+  pthread_mutex_unlock(&nap);
+}
 
-  nanosleep(&relative_time, NULL);
+void interrupt_delays() {
+  pthread_mutex_lock(&nap);
+  interruption = true;
+  pthread_cond_broadcast(&weekup); 
+  pthread_mutex_unlock(&nap);
 }
 
 // Compute time elapsed from start time

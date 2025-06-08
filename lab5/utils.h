@@ -38,6 +38,7 @@ int get_long(FILE *f, long *l, char *file, int line);
 // provide filename and line number (file:line).
 int get_string(FILE *f, char *s, char *file, int line);
 
+void interrupt_delays();
 #ifndef TIMEVAL_TO_TIMESPEC
 #define TIMEVAL_TO_TIMESPEC(tv, ts)                                            \
   {                                                                            \
