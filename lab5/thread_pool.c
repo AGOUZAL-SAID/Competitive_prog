@@ -87,7 +87,9 @@ void *pool_thread_main(void *arg) {
       }
 
         result = task->main(task->arg);
-        future_complete(task->future, result);
+        if (task->future) {
+            future_complete(task->future, result);
+        }
         task_destroy(task);
     }
 
