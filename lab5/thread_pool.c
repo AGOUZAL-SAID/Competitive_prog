@@ -48,7 +48,7 @@ void *pool_thread_main(void *arg) {
   int pool_thread_id = ((pool_thread_arg_t *)arg)->pool_thread_id;
   blocking_queue_t *blocking_queue = thread_pool->blocking_queue;
 
-  bool is_core = (pool_thread_id < thread_pool->core_pool_size);
+  bool is_core = (pool_thread_id <= thread_pool->core_pool_size);
   set_current_thread_id(&pool_thread_id, is_core ? "core" : "temp");
 
   task_t *task;
@@ -92,15 +92,25 @@ void *pool_thread_main(void *arg) {
     }
 
     mtxprintf(pt_debug, "thread terminated\n");
+    pthread_mutex_lock(&thread_pool->mutex);
+        
+    mtxprintf(pt_debug, "alive threads %d, idle threads %d\n",
+            thread_pool->pool_size, thread_pool->idle_threads);
+    pthread_mutex_unlock(&thread_pool->mutex);
     return NULL;
 }
 
 bool thread_pool_execute(thread_pool_t *thread_pool, task_t *task) {
     pthread_mutex_lock(&thread_pool->mutex);
+    if (thread_pool->shutdown) {
+        pthread_mutex_unlock(&thread_pool->mutex);
+        return false; 
+    }
     if (thread_pool->pool_size < thread_pool->core_pool_size) {
-        pool_thread_arg_t *arg = pool_thread_arg_create(thread_pool, id++);
+        pool_thread_arg_t *arg = pool_thread_arg_create(thread_pool, thread_pool->pool_size + 1); // core id: 1, 2, ...
         pthread_t thread;
         pthread_create(&thread, NULL, pool_thread_main, (void *)arg);
+        thread_pool->threads[thread_pool->pool_size] = thread;
         thread_pool->pool_size++;
         pthread_mutex_unlock(&thread_pool->mutex);
         blocking_queue_put(thread_pool->blocking_queue, (void *)task);
@@ -112,9 +122,10 @@ bool thread_pool_execute(thread_pool_t *thread_pool, task_t *task) {
         } else {
             pthread_mutex_lock(&thread_pool->mutex);
             if (thread_pool->pool_size < thread_pool->max_pool_size) {
-                pool_thread_arg_t *arg = pool_thread_arg_create(thread_pool, id++);
+                pool_thread_arg_t *arg = pool_thread_arg_create(thread_pool, thread_pool->pool_size + 1); // temp id
                 pthread_t thread;
                 pthread_create(&thread, NULL, pool_thread_main, (void *)arg);
+                thread_pool->threads[thread_pool->pool_size] = thread;
                 thread_pool->pool_size++;
                 pthread_mutex_unlock(&thread_pool->mutex);
                 blocking_queue_put(thread_pool->blocking_queue, (void *)task);
@@ -127,8 +138,19 @@ bool thread_pool_execute(thread_pool_t *thread_pool, task_t *task) {
 }
 
 void thread_pool_shutdown(thread_pool_t *thread_pool) {
-  pthread_mutex_lock(&thread_pool->mutex);
-  mtxprintf(pt_debug, "alive threads %d, idle threads %d\n",
-            thread_pool->pool_size, thread_pool->idle_threads);
-  pthread_mutex_unlock(&thread_pool->mutex);
+    pthread_mutex_lock(&thread_pool->mutex);
+    thread_pool->shutdown = 1; 
+    int n_threads = thread_pool->pool_size;
+    pthread_mutex_unlock(&thread_pool->mutex);
+
+
+    for (int i = 0; i < n_threads; ++i) {
+        blocking_queue_put(thread_pool->blocking_queue, (void *)shutdown_task);
+    }
+
+    for (int i = 0; i < n_threads; ++i) {
+        pthread_join(thread_pool->threads[i], NULL);
+
+    }
+    
 }
