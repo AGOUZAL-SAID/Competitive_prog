@@ -1,6 +1,6 @@
 # Competitive_prog
 
-This repository contains implementations of various concurrency primitives and data structures, primarily in C and Java, organized into laboratories (`lab3`, `lab5`). These implementations are designed for competitive programming and learning concurrency concepts.
+This repository contains implementations of various concurrency primitives and data structures, primarily in C, organized into laboratories (`lab3`, `lab5`). These implementations are designed for competitive programming and learning concurrency concepts.
 
 ## Repository Structure
 
@@ -17,7 +17,7 @@ This directory contains C implementations of:
 
 ### `lab5`
 
-This directory contains C and Java implementations, focusing on more advanced concurrency concepts, including:
+This directory contains C  implementations, focusing on more advanced concurrency concepts, including:
 
 *   **Thread Pool**: Implementation of a thread pool (`thread_pool.c`, `thread_pool.h`).
 *   **Executor**: A task execution system (`executor.c`, `executor.h`, `ExecutorMain.java`, `ExecutorRunnable.java`).
@@ -28,9 +28,9 @@ This directory contains C and Java implementations, focusing on more advanced co
 
 ## Compilation and Execution
 
-Each lab directory contains a `Makefile` to facilitate the compilation of C programs. For Java programs, standard compilation and execution via `javac` and `java` is expected.
+Each lab directory contains a `Makefile` to facilitate the compilation of C programs.
 
-### Example for `lab3` (C)
+### Example for `lab3`
 
 To compile:
 
@@ -45,26 +45,20 @@ To execute (e.g., the main blocking queue program):
 ./main_blocking_queue
 ```
 
-### Example for `lab5` (Java)
+### Example for `lab5` 
 
 To compile:
 
 ```bash
 cd Competitive_prog/lab5
-javac *.java
+make
 ```
 
 To execute (e.g., the main executor program):
 
 ```bash
-java ExecutorMain
+./ExecutorMain
 ```
 
-## Contribution
 
-Contributions are welcome. Please follow established coding practices and submit pull requests for any improvements or bug fixes.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details (if present).
 
