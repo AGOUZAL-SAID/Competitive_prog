@@ -1,60 +1,60 @@
 # Competitive_prog
 
-Ce dépôt contient des implémentations de diverses primitives de concurrence et de structures de données, principalement en C et Java, organisées en laboratoires (`lab3`, `lab5`). Ces implémentations sont conçues pour la programmation compétitive et l'apprentissage des concepts de concurrence.
+This repository contains implementations of various concurrency primitives and data structures, primarily in C and Java, organized into laboratories (`lab3`, `lab5`). These implementations are designed for competitive programming and learning concurrency concepts.
 
-## Structure du dépôt
+## Repository Structure
 
-Le dépôt est organisé en répertoires de laboratoires, chacun contenant des exercices ou des projets spécifiques liés à la concurrence.
+The repository is organized into lab directories, each containing specific exercises or projects related to concurrency.
 
 ### `lab3`
 
-Ce répertoire contient des implémentations en C de :
+This directory contains C implementations of:
 
-*   **Queues bloquantes (Blocking Queues)** : Implémentations utilisant des sémaphores (`sem_blocking_queue.c`) et des variables de condition (`cond_blocking_queue.c`).
-*   **Buffers bornés (Bounded Buffers)** : Une implémentation de base d'un buffer borné (`bounded_buffer.c`).
-*   **Utilitaires** : Fichiers d'aide (`utils.c`, `utils.h`) et un programme principal pour tester les queues bloquantes (`main_blocking_queue.c`).
-*   **Fichiers de test** : Plusieurs fichiers `test-XX.txt` pour valider les implémentations.
+*   **Blocking Queues**: Implementations using semaphores (`sem_blocking_queue.c`) and condition variables (`cond_blocking_queue.c`).
+*   **Bounded Buffers**: A basic implementation of a bounded buffer (`bounded_buffer.c`).
+*   **Utilities**: Helper files (`utils.c`, `utils.h`) and a main program to test blocking queues (`main_blocking_queue.c`).
+*   **Test Files**: Several `test-XX.txt` files for validating implementations.
 
 ### `lab5`
 
-Ce répertoire contient des implémentations en C et Java, axées sur des concepts plus avancés de concurrence, notamment :
+This directory contains C and Java implementations, focusing on more advanced concurrency concepts, including:
 
-*   **Thread Pool** : Implémentation d'un pool de threads (`thread_pool.c`, `thread_pool.h`).
-*   **Executor** : Un système d'exécution de tâches (`executor.c`, `executor.h`, `ExecutorMain.java`, `ExecutorRunnable.java`).
-*   **Future** : Implémentation du concept de Future pour la gestion des résultats asynchrones (`future.c`, `future.h`).
-*   **Scénarios et Tâches** : Fichiers pour définir des scénarios et des tâches (`scenario.c`, `scenario.h`, `task.c`, `task.h`).
-*   **Queues bloquantes et Buffers bornés** : Des implémentations similaires à `lab3` mais potentiellement adaptées ou étendues pour `lab5`.
-*   **Fichiers de test** : Plusieurs fichiers `test-XX.txt` pour valider les implémentations.
+*   **Thread Pool**: Implementation of a thread pool (`thread_pool.c`, `thread_pool.h`).
+*   **Executor**: A task execution system (`executor.c`, `executor.h`, `ExecutorMain.java`, `ExecutorRunnable.java`).
+*   **Future**: Implementation of the Future concept for managing asynchronous results (`future.c`, `future.h`).
+*   **Scenarios and Tasks**: Files for defining scenarios and tasks (`scenario.c`, `scenario.h`, `task.c`, `task.h`).
+*   **Blocking Queues and Bounded Buffers**: Implementations similar to `lab3` but potentially adapted or extended for `lab5`.
+*   **Test Files**: Several `test-XX.txt` files for validating implementations.
 
-## Compilation et Exécution
+## Compilation and Execution
 
-Chaque répertoire de laboratoire contient un `Makefile` pour faciliter la compilation des programmes C. Pour les programmes Java, une compilation et exécution standard via `javac` et `java` est attendue.
+Each lab directory contains a `Makefile` to facilitate the compilation of C programs. For Java programs, standard compilation and execution via `javac` and `java` is expected.
 
-### Exemple pour `lab3` (C)
+### Example for `lab3` (C)
 
-Pour compiler :
+To compile:
 
 ```bash
 cd Competitive_prog/lab3
 make
 ```
 
-Pour exécuter (par exemple, le programme principal de la queue bloquante) :
+To execute (e.g., the main blocking queue program):
 
 ```bash
 ./main_blocking_queue
 ```
 
-### Exemple pour `lab5` (Java)
+### Example for `lab5` (Java)
 
-Pour compiler :
+To compile:
 
 ```bash
 cd Competitive_prog/lab5
 javac *.java
 ```
 
-Pour exécuter (par exemple, le programme principal de l'executor) :
+To execute (e.g., the main executor program):
 
 ```bash
 java ExecutorMain
@@ -62,9 +62,9 @@ java ExecutorMain
 
 ## Contribution
 
-Les contributions sont les bienvenues. Veuillez suivre les pratiques de codage établies et soumettre des pull requests pour toute amélioration ou correction de bug.
+Contributions are welcome. Please follow established coding practices and submit pull requests for any improvements or bug fixes.
 
-## Licence
+## License
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails (si présent).
+This project is licensed under the MIT License. See the `LICENSE` file for more details (if present).
 
